@@ -6,20 +6,22 @@ use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
-class User
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     private ?string $email = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     private ?string $login = null;
 
     #[ORM\Column(length: 255)]
@@ -68,7 +70,7 @@ class User
         return $this;
     }
 
-    public function getPassword(): ?string
+    public function getPassword(): string
     {
         return $this->password;
     }
@@ -79,11 +81,19 @@ class User
 
         return $this;
     }
+    /**
+ * Vérifie si l'utilisateur possède un rôle spécifique.
+ */
+public function hasRole(string $role): bool
+{
+    return in_array($role, $this->getRoles());
+}
 
-    public function getRoles(): array
-    {
-        return $this->roles;
-    }
+
+public function getRoles(): array
+{
+    return array_unique($this->roles);
+}
 
     public function setRoles(array $roles): static
     {
@@ -113,7 +123,6 @@ class User
     public function removeClient(Client $client): static
     {
         if ($this->clients->removeElement($client)) {
-            // set the owning side to null (unless already changed)
             if ($client->getUserAccount() === $this) {
                 $client->setUserAccount(null);
             }
@@ -121,4 +130,39 @@ class User
 
         return $this;
     }
+
+    /**
+     * Méthode de l'interface UserInterface
+     * Retourne l'email de l'utilisateur comme identifiant
+     */
+    public function getUserIdentifier(): string
+    {
+        return $this->email;
+    }
+
+    /**
+     * Méthode de l'interface PasswordAuthenticatedUserInterface
+     * Cette méthode permet de vider les informations sensibles, comme les mots de passe temporaires
+     */
+    public function eraseCredentials(): void
+    {
+        // Si vous avez des informations sensibles à effacer, vous pouvez le faire ici
+        // Par exemple, si vous stockez un mot de passe temporaire ou des données sensibles, effacez-les ici.
+        // Dans ce cas, on laisse la méthode vide si aucune donnée sensible n'est présente.
+    }
+
+            #[ORM\Column(type: 'boolean')]
+        private $isActive = true;
+
+        public function getIsActive(): bool
+        {
+            return $this->isActive;
+        }
+
+        public function setIsActive(bool $isActive): self
+        {
+            $this->isActive = $isActive;
+            return $this;
+        }
+
 }

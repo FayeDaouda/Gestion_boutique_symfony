@@ -1,0 +1,122 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Dettes{% endblock %}
+
+{% block body %}
+<div class="container mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-4">Liste des Dettes</h1>
+    
+    <!-- Tableau des dettes -->
+    <table class="min-w-full bg-white border border-gray-300 rounded-lg shadow-md">
+        <thead class="bg-blue-500 text-white">
+            <tr>
+                <th class="px-4 py-2 text-left">ID</th>
+                <th class="px-4 py-2 text-left">Client</th>
+                <th class="px-4 py-2 text-left">Date</th>
+                <th class="px-4 py-2 text-left">Montant Total</th>
+                <th class="px-4 py-2 text-left">Montant Versé</th>
+                <th class="px-4 py-2 text-left">Montant Restant</th>
+                <th class="px-4 py-2 text-left">Statut</th>
+                <th class="px-4 py-2 text-left">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+           {% for dette in dettes %}
+        <tr id="dette-{{ dette.id }}" class="border-b hover:bg-gray-100">
+            <td class="px-4 py-2">{{ dette.id }}</td>
+            <td class="px-4 py-2">{{ dette.client.surname }}</td>
+            <td class="px-4 py-2">{{ dette.date|date('d/m/Y') }}</td>
+            <td class="px-4 py-2">{{ dette.montant | number_format(2, '.', ' ') }} FCFA</td>
+            <td class="px-4 py-2">{{ dette.montantVerser | number_format(2, '.', ' ') }} FCFA</td>
+            <td class="px-4 py-2">{{ dette.montantRestant | number_format(2, '.', ' ') }} FCFA</td>
+            <td class="px-4 py-2">
+                <span class="px-2 py-1 rounded-full 
+                    {% if dette.montantRestant == 0 %}
+                        bg-green-500 text-white
+                    {% else %}
+                        bg-yellow-500 text-white
+                    {% endif %}">
+                    {% if dette.montantRestant == 0 %}
+                        Soldée
+                    {% else %}
+                        En cours
+                    {% endif %}
+                </span>
+            </td>
+            <td class="px-4 py-2">
+                {% if dette.montantRestant == 0 %}
+                    <button 
+                        onclick="archiveDette({{ dette.id }})"
+                        class="px-4 py-2 text-white bg-blue-500 hover:bg-blue-700 rounded-lg">
+                        Archiver
+                    </button>
+                {% else %}
+                    <span class="text-gray-500">Aucune action</span>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr>
+            <td colspan="8" class="px-4 py-2 text-center text-gray-500">Aucune dette à afficher.</td>
+        </tr>
+    {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Pagination (si applicable) -->
+    <!-- Pagination -->
+    <div class="mt-4 flex justify-between items-center">
+        <div>
+            {% if currentPage > 1 %}
+                <a href="{{ path('dette_list', {'page': currentPage - 1}) }}" class="px-4 py-2 bg-gray-300 text-black rounded-md">Précédent</a>
+            {% endif %}
+        </div>
+        <div class="text-center">
+            Page {{ currentPage }} sur {{ pages }}
+        </div>
+        <div>
+            {% if currentPage < pages %}
+                <a href="{{ path('dette_list', {'page': currentPage + 1}) }}" class="px-4 py-2 bg-gray-300 text-black rounded-md">Suivant</a>
+            {% endif %}
+        </div>
+    </div>
+    
+   
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    function archiveDette(detteId) {
+    const row = document.getElementById(`dette-${detteId}`);
+    if (row) {
+        // Masquer la ligne immédiatement
+        row.style.display = "none";
+
+        // Envoyer une requête au backend
+        fetch(`/dette/archive/${detteId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token("archive_dette") }}' // Remplacez par le token CSRF si nécessaire
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log(`Dette ${detteId} archivée côté serveur.`);
+            } else {
+                console.error(`Erreur lors de l'archivage de la dette ${detteId}.`);
+            }
+        })
+        .catch(error => {
+            console.error(`Erreur réseau : ${error}`);
+        });
+    } else {
+        console.error(`Impossible de trouver la ligne pour la dette ${detteId}.`);
+    }
+}
+
+
+</script>
+{% endblock %}

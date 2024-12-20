@@ -1,0 +1,292 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Clients{% endblock %}
+
+{% block body %}
+
+    {% for message in app.flashes('error') %}
+    <div class="bg-red-600 text-white p-4 rounded mb-4">
+        {{ message }}
+    </div>
+    {% endfor %}
+
+        <!-- Dashboard -->
+<div class="grid grid-cols-3 gap-4 mb-4 p-6">
+    <!-- Nombre de comptes utilisateurs -->
+    <div class="bg-gradient-to-b from-green-900 to-green-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <i class="fas fa-users w-10 h-10 text-2xl"></i>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Comptes Utilisateurs</h2>
+            <p class="text-4xl font-bold">{{ users|length }}</p>
+            <p class="text-sm">
+                {% set totalUsers = users|length %}
+                
+            </p>
+        </div>
+    </div>
+
+    <!-- Nombre d'articles -->
+    <div class="bg-gradient-to-b from-yellow-900 to-yellow-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <i class="fas fa-boxes w-10 h-10 text-2xl"></i>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Articles</h2>
+            <p class="text-4xl font-bold">{{ articles|length }}</p>
+            <p class="text-sm">Nombre total d'articles dans la boutique</p>
+        </div>
+    </div>
+
+    <!-- Nombre de dettes -->
+    <div class="bg-gradient-to-b from-red-900 to-red-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <i class="fas fa-coins w-10 h-10 text-2xl"></i>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Demandes</h2>
+            <p class="text-4xl font-bold">{{ demandes|length }}</p>
+            <p class="text-sm">Nombre total de demandes en cours</p>
+        </div>
+    </div>
+</div>
+
+
+
+
+    <div class="container mx-auto p-6">
+        <!-- Header with button to add client -->
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold">Liste des Clients</h1>
+            <a href="javascript:void(0);" onclick="openAddClientModal()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                Ajouter un client
+            </a>
+        </div>
+
+        <!-- Filter by phone number and user account -->
+        <div class="mb-4 flex gap-4">
+            <input 
+                type="text" 
+                placeholder="Rechercher par téléphone..." 
+                class="w-full px-4 py-2 border rounded-lg"
+                oninput="filterClientsByPhone(this.value)"
+            />
+        </div>
+         <div class="mb-4 flex gap-4">
+            <select 
+                id="user-account-filter" 
+                class="px-4 py-2 border rounded-lg" 
+                onchange="filterClientsByAccount(this.value)"
+            >
+                <option value="all">Tous</option>
+                <option value="with-account">Avec compte utilisateur</option>
+                <option value="without-account">Sans compte utilisateur</option>
+            </select>
+        </div>
+
+        <!-- Table of clients -->
+        <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+            <thead class="bg-blue-500 text-white">
+                <tr>
+                    <th class="px-4 py-2 text-left">Nom</th>
+                    <th class="px-4 py-2 text-left">Téléphone</th>
+                    <th class="px-4 py-2 text-left">Montant Dû</th>
+                    <th class="px-4 py-2 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="client-list">
+                {% for item in clientsWithDebt %}
+                    <tr class="border-b hover:bg-gray-100" data-has-account="{{ item.client.hasUserAccount ? 'true' : 'false' }}">
+                        <td class="px-4 py-2">{{ item.client.surname }}</td>
+                        <td class="px-4 py-2">{{ item.client.telephone }}</td>
+                        <td class="px-4 py-2">{{ item.montantRestant | default(0) }} Fcfa</td>
+                        <td class="px-4 py-2">
+                            <a href="{{ path('boutiquier_client_show', {'id': item.client.id}) }}" class="text-blue-500 hover:underline">Voir</a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-2 text-center text-gray-500">Aucun client trouvé</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <!-- Pagination Controls -->
+        <div id="pagination-controls" class="mt-4 text-center">
+            <button id="prev-page" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onclick="changePage(currentPage - 1)" disabled>Précédent</button>
+            <span id="page-number" class="mx-4">Page 1</span>
+            <button id="next-page" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onclick="changePage(currentPage + 1)">Suivant</button>
+        </div>
+    </div>
+
+    <!-- Modal for adding a new client -->
+    <div id="addClientModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-1/3">
+            <h2 class="text-xl font-bold mb-4">Ajouter un Client</h2>
+            <form action="{{ path('boutiquier_client_create') }}" method="post">
+                <div id="error-message" class="text-red-500 text-sm mb-4"></div>
+
+                <div class="mb-4">
+                    <label for="surname" class="block text-sm font-medium text-gray-700">Nom</label>
+                    <input type="text" id="surname" name="surname" class="w-full px-4 py-2 border rounded-lg" required>
+                </div>
+                <div class="mb-4">
+                    <label for="telephone" class="block text-sm font-medium text-gray-700">Téléphone</label>
+                    <input type="text" id="telephone" name="telephone" class="w-full px-4 py-2 border rounded-lg" required>
+                </div>
+                <div class="mb-4">
+                    <label for="adresse" class="block text-sm font-medium text-gray-700">Adresse</label>
+                    <textarea id="adresse" name="adresse" class="w-full px-4 py-2 border rounded-lg" required></textarea>
+                </div>
+
+                <!-- Option to associate a user account -->
+                <div class="mb-4">
+                    <label for="create_user_account" class="block text-sm font-medium text-gray-700">Créer un compte utilisateur</label>
+                    <input type="checkbox" id="create_user_account" name="create_user_account" class="mr-2" onclick="toggleUserAccountFields()">
+                    <span>Oui</span>
+                </div>
+
+                <div id="user-account-fields" class="hidden">
+                    <div class="mb-4">
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="email" name="email" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div class="mb-4">
+                        <label for="login" class="block text-sm font-medium text-gray-700">Login</label>
+                        <input type="text" id="login" name="login" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="block text-sm font-medium text-gray-700">Mot de Passe</label>
+                        <input type="password" id="password" name="password" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Ajouter</button>
+                    <button type="button" onclick="closeAddClientModal()" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+   
+
+    <!-- JavaScript for modal and client filtering -->
+    <script>
+        function openAddClientModal() {
+            document.getElementById('addClientModal').classList.remove('hidden');
+        }
+
+        function closeAddClientModal() {
+            document.getElementById('addClientModal').classList.add('hidden');
+        }
+
+        function filterClientsByPhone(value) {
+            const filter = value.toLowerCase();
+            const rows = document.querySelectorAll("#client-list tr");
+
+            rows.forEach(row => {
+                const telephone = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+                row.style.display = telephone.includes(filter) ? "" : "none";
+            });
+        }
+
+        function toggleUserAccountFields() {
+            const fields = document.getElementById('user-account-fields');
+            const checkbox = document.getElementById('create_user_account');
+            fields.classList.toggle('hidden', !checkbox.checked);
+        }
+
+        function filterClientsByAccount(value) {
+            const rows = document.querySelectorAll("#client-list tr");
+
+            rows.forEach(row => {
+                const hasAccount = row.getAttribute("data-has-account");
+                if (value === "all") {
+                    row.style.display = ""; // Montre toutes les lignes
+                } else if (value === "with-account") {
+                    row.style.display = hasAccount === "true" ? "" : "none"; // Montre les clients avec compte
+                } else if (value === "without-account") {
+                    row.style.display = hasAccount === "false" ? "" : "none"; // Montre les clients sans compte
+                }
+            });
+        }
+
+
+        const clientsPerPage = 5;
+        let currentPage = 1;
+        const clientRows = [...document.querySelectorAll('#client-list tr')];
+
+        function displayClients() {
+            const totalClients = clientRows.length;
+            const startIndex = (currentPage - 1) * clientsPerPage;
+            const endIndex = startIndex + clientsPerPage;
+
+            // Hide all clients
+            clientRows.forEach((row, index) => {
+                if (index >= startIndex && index < endIndex) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update page number
+            document.getElementById('page-number').textContent = `Page ${currentPage}`;
+
+            // Enable/disable buttons based on the page
+            document.getElementById('prev-page').disabled = currentPage === 1;
+            document.getElementById('next-page').disabled = currentPage * clientsPerPage >= totalClients;
+        }
+
+        function changePage(page) {
+            const totalClients = clientRows.length;
+            if (page < 1 || page > Math.ceil(totalClients / clientsPerPage)) return;
+
+            currentPage = page;
+            displayClients();
+        }
+
+        // Initialize the page
+        displayClients();
+
+        function filterClientsByPhone(value) {
+            const filter = value.toLowerCase();
+            const rows = document.querySelectorAll("#client-list tr");
+
+            rows.forEach(row => {
+                const telephone = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+                row.style.display = telephone.includes(filter) ? "" : "none";
+            });
+
+            // Reinitialize pagination after filtering
+            currentPage = 1;
+            displayClients();
+        }
+
+        function toggleUserAccountFields() {
+            const fields = document.getElementById('user-account-fields');
+            const checkbox = document.getElementById('create_user_account');
+            fields.classList.toggle('hidden', !checkbox.checked);
+        }
+
+        function filterClientsByAccount(value) {
+            const rows = document.querySelectorAll("#client-list tr");
+
+            rows.forEach(row => {
+                const hasAccount = row.getAttribute("data-has-account");
+                if (value === "all") {
+                    row.style.display = ""; // Montre toutes les lignes
+                } else if (value === "with-account") {
+                    row.style.display = hasAccount === "true" ? "" : "none"; // Montre les clients avec compte
+                } else if (value === "without-account") {
+                    row.style.display = hasAccount === "false" ? "" : "none"; // Montre les clients sans compte
+                }
+            });
+
+            // Reinitialize pagination after filtering
+            currentPage = 1;
+            displayClients();
+        }
+    </script>
+{% endblock %}

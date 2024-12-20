@@ -1,0 +1,173 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    {% for message in app.flashes('error') %}
+        <div class="bg-red-600 text-white p-4 rounded mb-4">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    <div class="container mx-auto p-6">
+        <!-- Titre et Options -->
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold">Mes Demandes de Dette </h1>
+        </div>
+        
+        <div class="flex justify-between items-center mb-4">           
+            <!-- Dropdown pour filtrer -->
+            <div class="mb-4">
+                <label for="filter" class="mr-2 font-semibold">Filtrer les dettes :</label>
+                <select id="filter" class="p-2 border border-gray-300 rounded" onchange="applyFilter()">
+                    <option value="all">Tous</option>
+                    <option value="En Cours">En Cours</option>
+                    <option value="annuler">Annuler</option>
+                    <option value="validé">Validé</option>
+                    <option value="Relancée">Relancée</option>
+                </select>
+            </div>
+            <a href="http://127.0.0.1:8000/client/faire-demande" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Faire une demande
+                </a>
+
+
+
+
+        </div>
+
+        <!-- Tableau des demandes -->
+       <!-- Tableau des demandes -->
+<table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+    <thead class="bg-blue-500 text-white">
+        <tr>
+            <th class="px-4 py-2 text-left">ID Demande</th>
+            <th class="px-4 py-2 text-left">Montant</th>
+            <th class="px-4 py-2 text-left">Etat</th>
+            <th class="px-4 py-2 text-left">Actions</th>
+        </tr>
+    </thead>
+    <tbody id="demandes-table">
+        {% for demande in demandes %}
+            <tr class="border-b hover:bg-gray-100 demande-row" data-etat="{{ demande.etat }}">
+                <td class="px-4 py-2">{{ demande.id }}</td>
+                <td class="px-4 py-2">{{ demande.montant }} FCFA</td>
+                <td class="px-4 py-2">
+                    {% if demande.etat == 'En Cours' %}
+                        <span class="text-gray-500">En Cours</span>
+                    {% elseif demande.etat == 'validé' %}
+                        <span class="text-green-500">Validé</span>
+                    {% elseif demande.etat == 'annuler' %}
+                        <span class="text-red-500">Annuler</span>
+                    {% elseif demande.etat == 'Relancée' %}
+                        <span class="text-blue-500">Relancée</span>
+                    {% endif %}
+                </td>
+
+                <td class="px-4 py-2">
+                    {% if demande.etat == 'annuler' %}
+                        <form method="post" action="{{ path('client_relancer_dette', {'id': demande.id}) }}" class="inline">
+                            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                Envoyer une relance
+                            </button>
+                        </form>
+                    {% else %}
+                        <span class="text-gray-400">Aucune action</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="4" class="px-4 py-2 text-center text-gray-500">Aucune demande de dette trouvée pour ce client.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination -->
+<div id="pagination-container" class="flex justify-center mt-4 space-x-2"></div>
+
+    </div>
+
+    <!-- Script JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const allRows = document.querySelectorAll('.demande-row');
+            const filterDropdown = document.getElementById('filter');
+
+            // Fonction pour appliquer le filtre
+            function applyFilter() {
+                const filterValue = filterDropdown.value;
+
+                allRows.forEach(row => {
+                    const etat = row.dataset.etat;
+
+                    // Afficher ou masquer les lignes selon le filtre
+                    if (filterValue === 'all') {
+                        row.style.display = '';
+                    } else if (etat === filterValue) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+
+            // Appliquer le filtre au changement du dropdown
+            filterDropdown.addEventListener('change', applyFilter);
+
+            // Appliquer le filtre au chargement de la page (si nécessaire)
+            applyFilter();
+        });
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+    const rowsPerPage = 7; // Nombre de lignes par page
+    const tableBody = document.getElementById('demandes-table');
+    const rows = Array.from(tableBody.querySelectorAll('.demande-row'));
+    const paginationContainer = document.getElementById('pagination-container');
+
+    // Fonction pour afficher les lignes de la page actuelle
+    function displayRows(page) {
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        rows.forEach((row, index) => {
+            row.style.display = index >= start && index < end ? 'table-row' : 'none';
+        });
+    }
+
+    // Fonction pour créer les boutons de pagination
+    function setupPagination() {
+        const pageCount = Math.ceil(rows.length / rowsPerPage);
+        paginationContainer.innerHTML = ''; // Réinitialiser les boutons
+
+        for (let i = 1; i <= pageCount; i++) {
+            const button = document.createElement('button');
+            button.textContent = i;
+            button.classList.add('bg-blue-500', 'text-white', 'px-4', 'py-2', 'rounded', 'hover:bg-blue-600', 'focus:outline-none');
+
+            button.addEventListener('click', () => {
+                document.querySelectorAll('#pagination-container button').forEach(btn => btn.classList.remove('bg-blue-700'));
+                button.classList.add('bg-blue-700');
+                displayRows(i);
+            });
+
+            paginationContainer.appendChild(button);
+        }
+
+        // Afficher la première page par défaut
+        if (pageCount > 0) {
+            paginationContainer.querySelector('button').classList.add('bg-blue-700');
+            displayRows(1);
+        }
+    }
+
+    // Initialiser la pagination
+    if (rows.length > 0) {
+        setupPagination();
+    } else {
+        paginationContainer.innerHTML = '<p class="text-gray-500">Aucune donnée à paginer.</p>';
+    }
+});
+
+    </script>
+{% endblock %}

@@ -1,0 +1,361 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Utilisateurs{% endblock %}
+
+{% block body %}
+    {% for message in app.flashes('error') %}
+        <div class="bg-red-600 text-white p-4 rounded mb-4">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    
+    <!-- Dashboard -->
+<div class="grid grid-cols-3 gap-4 mb-4 p-6">
+    <!-- Nombre de comptes utilisateurs -->
+    <div class="bg-gradient-to-b from-green-900 to-green-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <i class="fas fa-users w-10 h-10 text-2xl"></i>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Comptes Utilisateurs</h2>
+            <p class="text-4xl font-bold">{{ users|length }}</p>
+            <p class="text-sm">
+                {% set totalUsers = users|length %}
+                
+            </p>
+        </div>
+    </div>
+
+    <!-- Nombre d'articles -->
+    <div class="bg-gradient-to-b from-yellow-900 to-yellow-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <i class="fas fa-boxes w-10 h-10 text-2xl"></i>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Articles</h2>
+            <p class="text-4xl font-bold">{{ articles|length }}</p>
+            <p class="text-sm">Nombre total d'articles dans la boutique</p>
+        </div>
+    </div>
+
+    <!-- Nombre de dettes -->
+    <div class="bg-gradient-to-b from-red-900 to-red-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <i class="fas fa-coins w-10 h-10 text-2xl"></i>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Dettes</h2>
+            <p class="text-4xl font-bold">{{ dettes|length }}</p>
+            <p class="text-sm">Nombre total de dettes en cours</p>
+        </div>
+    </div>
+</div>
+
+
+
+
+    <div class="container mx-auto p-6">
+        <!-- Header with button to add user -->
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold">Liste des Utilisateurs</h1>
+            <a href="javascript:void(0);" onclick="openAddUserModal()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                Ajouter un utilisateur
+            </a>
+        </div>
+
+                <!-- Filter by role -->
+        <div class="mb-4">
+           <select 
+                onchange="filterUsersByRole(this.value)" 
+                class="w-full px-4 py-2 border rounded-lg">
+                <option value="">Filtrer par rôle</option> <!-- Valeur vide pour afficher tous les utilisateurs -->
+                <option value="ROLE_ADMIN">Admin</option> <!-- Filtrer les admins -->
+                <option value="ROLE_BOUTIQUIER">Boutiquier</option> <!-- Filtrer les boutiquiers -->
+                <option value="ROLE_CLIENT">Client</option> <!-- Filtrer les clients -->
+            </select>
+
+        </div>
+
+        <!-- Table of users -->
+<table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+    <thead class="bg-blue-500 text-white">
+        <tr>
+            <th class="px-4 py-2 text-left">Rôle</th>
+            <th class="px-4 py-2 text-left">Email</th>
+            <th class="px-4 py-2 text-left">Login</th>
+            <th class="px-4 py-2 text-left">Actions</th>
+        </tr>
+    </thead>
+    <tbody id="demandes-table">
+        {% for user in users %}
+        <tr class="demande-row border-b hover:bg-gray-100">
+            <td>{{ user.roles | join(', ') }}</td>
+            <td class="px-4 py-2">{{ user.email }}</td>
+            <td class="px-4 py-2">{{ user.login }}</td>
+            <td class="px-4 py-2 flex space-x-4">
+                <button onclick="openEditUserModal({{ user.id }})" class="flex items-center space-x-2 text-blue-500 hover:text-blue-700">
+                    <i class="fas fa-edit fa-lg"></i> <span>Modifier</span>
+                </button>
+                <button onclick="linkUserToClient({{ user.id }})" class="flex items-center space-x-2 text-green-500 hover:text-green-700">
+                    <i class="fas fa-link fa-lg"></i> <span>Lier</span>
+                </button>
+                <button onclick="toggleUserStatus({{ user.id }}, '{{ user.isActive }}')" class="flex items-center space-x-2">
+                    <i class="fas fa-power-off fa-lg {{ user.isActive ? 'text-red-500' : 'text-green-500' }}"></i>
+                    <span class="{{ user.isActive ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700' }}">
+                        {{ user.isActive ? 'Désactiver' : 'Activer' }}
+                    </span>
+                </button>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4" class="px-4 py-2 text-center text-gray-500">Aucun utilisateur trouvé</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination container -->
+<div id="pagination-container" class="flex justify-center items-center space-x-2 mt-4"></div>
+
+        
+    </div>
+
+         
+   
+
+
+    <!-- Modal: Ajouter un utilisateur -->
+    <div id="addUserModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 class="text-2xl font-bold mb-4">Ajouter un Utilisateur</h2>
+            <form action="{{ path('user_add') }}" method="post">
+                <div class="mb-4">
+                    <label for="surname" class="block text-sm font-semibold">Surname</label>
+                    <input type="text" name="prenom" id="prenom" class="w-full px-4 py-2 border rounded-lg">
+                </div>               
+                <div class="mb-4">
+                    <label for="telephone" class="block text-sm font-semibold">Téléphone</label>
+                    <input type="text" name="tel" id="tel" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label for="adresse" class="block text-sm font-semibold">Adresse</label>
+                    <input type="text" name="adresse" id="adresse" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label for="login" class="block text-sm font-semibold">Login</label>
+                    <input type="text" name="login" id="login" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label for="email" class="block text-sm font-semibold">Email</label>
+                    <input type="text" name="email" id="email" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="block text-sm font-semibold">Mot de passe</label>
+                    <input type="password" name="password" id="password" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold">Rôle</label>
+                    <div class="flex space-x-4">
+                        <label>
+                            <input type="radio" name="roles" value="ROLE_ADMIN"> Admin
+                        </label>
+                        <label>
+                            <input type="radio" name="roles" value="ROLE_BOUTIQUIER"> Boutiquier
+                        </label>
+                        <label>
+                            <input type="radio" name="roles" value="ROLE_CLIENT"> Client
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4">
+                    <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400" onclick="closeAddUserModal()">Annuler</button>
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Modifier un utilisateur -->
+    <div id="editUserModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 class="text-2xl font-bold mb-4">Modifier un Utilisateur</h2>
+            <form action="" method="post">
+                <!-- Vous pouvez pré-remplir les champs ici -->
+                <div class="mb-4">
+                    <label for="editLogin" class="block text-sm font-semibold">Login</label>
+                    <input type="text" name="login" id="editLogin" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label for="editPassword" class="block text-sm font-semibold">Mot de passe</label>
+                    <input type="password" name="password" id="editPassword" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400" onclick="closeEditUserModal()">Annuler</button>
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Lier un utilisateur à un client -->
+    <div id="linkUserToClientModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 class="text-2xl font-bold mb-4">Lier à un Client</h2>
+            <form action="" method="post">
+                <div class="mb-4">
+                    <label for="clientLogin" class="block text-sm font-semibold">Login</label>
+                    <input type="text" name="login" id="clientLogin" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label for="clientPassword" class="block text-sm font-semibold">Mot de passe</label>
+                    <input type="password" name="password" id="clientPassword" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400" onclick="closeLinkUserToClientModal()">Annuler</button>
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+
+    <script>
+        // Add your JavaScript code to open/close modals
+        function openAddUserModal() {
+            document.getElementById('addUserModal').classList.remove('hidden');
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').classList.add('hidden');
+        }
+
+        function openEditUserModal(userId) {
+            document.getElementById('editUserModal').classList.remove('hidden');
+            // You can fetch user details and fill in the form
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').classList.add('hidden');
+        }
+
+        function linkUserToClient(userId) {
+            document.getElementById('linkUserToClientModal').classList.remove('hidden');
+            // You can fetch user details and fill in the form
+        }
+
+        function closeLinkUserToClientModal() {
+            document.getElementById('linkUserToClientModal').classList.add('hidden');
+        }
+
+
+    function toggleUserStatus(userId, currentStatus) {
+    // Vérification si currentStatus est une chaîne ou un nombre
+    const isActive = currentStatus === 'true' || currentStatus === 1; // Accepte 'true' ou 1 comme vrai
+    const newStatus = !isActive; // Inverse le statut
+
+    // Affichage pour débogage
+    console.log(`User ID: ${userId}, Current Status: ${currentStatus}, New Status: ${newStatus}`);
+
+    if (confirm(`Êtes-vous sûr de vouloir ${newStatus ? 'activer' : 'désactiver'} cet utilisateur ?`)) {
+        fetch(`/admin/user/toggle-status/${userId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ isActive: newStatus }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    location.reload(); // Recharge la page pour voir le changement
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Une erreur est survenue.');
+            });
+    }
+} 
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const rowsPerPage = 5; // Nombre de lignes par page
+        const tableBody = document.getElementById('demandes-table');
+        const rows = Array.from(tableBody.querySelectorAll('.demande-row')); // Sélectionner les lignes de la table
+        const paginationContainer = document.getElementById('pagination-container');
+
+        // Fonction pour afficher les lignes de la page actuelle
+        function displayRows(page) {
+            const start = (page - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+
+            rows.forEach((row, index) => {
+                row.style.display = index >= start && index < end ? 'table-row' : 'none'; // Afficher ou masquer les lignes
+            });
+        }
+
+        // Fonction pour créer les boutons de pagination
+        function setupPagination() {
+            const pageCount = Math.ceil(rows.length / rowsPerPage); // Calcul du nombre de pages
+            paginationContainer.innerHTML = ''; // Réinitialiser les boutons de pagination
+
+            for (let i = 1; i <= pageCount; i++) {
+                const button = document.createElement('button');
+                button.textContent = i; // Numéro de page
+                button.classList.add('bg-blue-500', 'text-white', 'px-4', 'py-2', 'rounded', 'hover:bg-blue-600', 'focus:outline-none');
+
+                // Ajouter l'événement de clic pour chaque bouton
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('#pagination-container button').forEach(btn => btn.classList.remove('bg-blue-700')); // Supprimer la classe active
+                    button.classList.add('bg-blue-700'); // Ajouter la classe active au bouton cliqué
+                    displayRows(i); // Afficher les lignes de la page sélectionnée
+                });
+
+                paginationContainer.appendChild(button); // Ajouter le bouton à la pagination
+            }
+
+            // Afficher la première page par défaut
+            if (pageCount > 0) {
+                paginationContainer.querySelector('button').classList.add('bg-blue-700'); // Activer la première page
+                displayRows(1); // Afficher la première page
+            }
+        }
+
+        // Initialiser la pagination si des lignes sont présentes
+        if (rows.length > 0) {
+            setupPagination();
+        } else {
+            paginationContainer.innerHTML = '<p class="text-gray-500">Aucune donnée à paginer.</p>';
+        }
+    });
+
+
+    function filterUsersByRole(selectedRole) {
+    // Récupérer toutes les lignes du tableau
+    const rows = document.querySelectorAll("#demandes-table .demande-row");
+
+    rows.forEach(row => {
+        const role = row.getAttribute("data-role");
+        
+        // Afficher ou masquer les lignes en fonction du rôle sélectionné
+        if (!selectedRole || role === selectedRole) {
+            row.style.display = ""; // Afficher la ligne
+        } else {
+            row.style.display = "none"; // Masquer la ligne
+        }
+    });
+}
+
+
+
+
+
+
+    </script>
+{% endblock %}

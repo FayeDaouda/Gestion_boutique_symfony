@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Entity;
 
 use App\Repository\DemandeRepository;
@@ -30,9 +31,9 @@ class Demande
     private ?float $montant = null;
 
     /**
-     * @var Collection<int, article>
+     * @var Collection<int, Article>
      */
-    #[ORM\ManyToMany(targetEntity: article::class, inversedBy: 'demandes')]
+    #[ORM\ManyToMany(targetEntity: Article::class, inversedBy: 'demandes')]
     private Collection $article;
 
     public function __construct()
@@ -94,14 +95,14 @@ class Demande
     }
 
     /**
-     * @return Collection<int, article>
+     * @return Collection<int, Article>
      */
     public function getArticle(): Collection
     {
         return $this->article;
     }
 
-    public function addArticle(article $article): static
+    public function addArticle(Article $article): static
     {
         if (!$this->article->contains($article)) {
             $this->article->add($article);
@@ -110,7 +111,7 @@ class Demande
         return $this;
     }
 
-    public function removeArticle(article $article): static
+    public function removeArticle(Article $article): static
     {
         $this->article->removeElement($article);
 

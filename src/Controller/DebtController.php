@@ -51,5 +51,29 @@ class DebtController extends AbstractController
             'paiements' => $paiements,
         ]);
     }
+
+    // Nouvelle méthode pour lister les dettes
+    #[Route('/dette/lister', name: 'dette_list')]
+    public function listDettes(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $page = $request->query->get('page', 1);
+        $limit = 10;  // Nombre de dettes par page
+        $offset = ($page - 1) * $limit;
+
+        $query = $entityManager->getRepository(Dette::class)->createQueryBuilder('d')
+            ->orderBy('d.date', 'DESC')
+            ->getQuery();
+
+        $total = count($query->getResult());
+        $dettes = $entityManager->getRepository(Dette::class)->findBy([], null, $limit, $offset);
+
+        $pages = ceil($total / $limit);  // Nombre total de pages
+
+        return $this->render('admin/list_dettes.html.twig', [
+            'dettes' => $dettes,
+            'currentPage' => $page,
+            'pages' => $pages,
+        ]);
+    }
 }
 

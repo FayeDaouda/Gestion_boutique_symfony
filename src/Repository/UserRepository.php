@@ -1,14 +1,12 @@
 <?php
 
+// UserRepository.php
 namespace App\Repository;
 
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @extends ServiceEntityRepository<User>
- */
 class UserRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -16,28 +14,44 @@ class UserRepository extends ServiceEntityRepository
         parent::__construct($registry, User::class);
     }
 
-    //    /**
-    //     * @return User[] Returns an array of User objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('u')
-    //            ->andWhere('u.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('u.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
 
-    //    public function findOneBySomeField($value): ?User
-    //    {
-    //        return $this->createQueryBuilder('u')
-    //            ->andWhere('u.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+
+    public function findActiveUsers()
+{
+    return $this->createQueryBuilder('u')
+        ->andWhere('u.isActive = :active')
+        ->setParameter('active', true)
+        ->getQuery()
+        ->getResult();
 }
+
+public function findByRole($role)
+{
+    return $this->createQueryBuilder('u')
+        ->andWhere('u.roles LIKE :role')
+        ->setParameter('role', '%' . $role . '%')
+        ->getQuery()
+        ->getResult();
+}
+
+public function saveUser($user)
+{
+    // Récupérer l'EntityManager
+    $entityManager = $this->getEntityManager();
+
+    // Persister l'entité
+    $entityManager->persist($user);
+
+    // Enregistrer les modifications dans la base de données
+    $entityManager->flush();
+}
+public function remove(User $user, bool $flush = false)
+{
+    $this->_em->remove($user);
+    if ($flush) {
+        $this->_em->flush();
+    }
+}
+
+}
+

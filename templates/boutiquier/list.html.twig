@@ -1,0 +1,95 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Demandes{% endblock %}
+
+{% block body %}
+    <div class="container mx-auto p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold">Liste des Demandes</h1>
+            <a href="http://127.0.0.1:8000/boutiquier/clients" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Retour à l'Acceuil</a>
+        </div>
+
+        <!-- Filtre des demandes -->
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <label for="filter" class="mr-2 font-semibold">Filtrer les demandes :</label>
+                <select id="filter" class="p-2 border border-gray-300 rounded" onchange="applyFilter()">
+                    <option value="all" {% if app.request.query.get('filter') == 'all' %}selected{% endif %}>Toutes</option>
+                    <option value="validé" {% if app.request.query.get('filter') == 'validé' %}selected{% endif %}>Validées</option>
+                    <option value="annuler" {% if app.request.query.get('filter') == 'annuler' %}selected{% endif %}>Annulées</option>
+                    <option value="En Cours" {% if app.request.query.get('filter') == 'En Cours' %}selected{% endif %}>En Cours</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tableau des demandes -->
+        <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+            <thead class="bg-blue-500 text-white">
+                <tr>
+                    <th class="px-4 py-2">ID Demande</th>
+                    <th class="px-4 py-2">Client</th>
+                    <th class="px-4 py-2">Date</th>
+                    <th class="px-4 py-2">Montant</th>
+                    <th class="px-4 py-2">État</th>
+                    <th class="px-4 py-2">Articles</th>
+                    <th class="px-4 py-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for demande in demandes %}
+                    <tr class="border-b hover:bg-gray-100">
+                        <td class="px-4 py-2">{{ demande.id }}</td>
+                        <td class="px-4 py-2">{{ demande.client.surname }}</td> <!-- Correction ici -->
+                        <td class="px-4 py-2">{{ demande.dateDemande | date('d/m/Y') }}</td> <!-- Correction ici -->
+                        <td class="px-4 py-2">{{ demande.montant }} Fcfa</td>
+                        <td class="px-4 py-2">
+                            <span class="px-2 py-1 
+                                {% if demande.etat == 'validé' %}
+                                    bg-green-500
+                                {% elseif demande.etat == 'annuler' %}
+                                    bg-red-500
+                                {% elseif demande.etat == 'En Cours' %}
+                                    bg-blue-500
+                                {% else %}
+                                    bg-gray-500
+                                {% endif %}
+                                text-white rounded">
+                                {{ demande.etat }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-2">
+                            <a href="{{ path('demande_articles', { 'id': demande.id }) }}" class="text-blue-500 hover:underline">Voir</a>
+                        </td>
+                        <td class="px-4 py-2">
+                            <!-- Conteneur Flexbox -->
+                            <div class="flex space-x-4">
+                                <!-- Formulaire pour changer l'état de la demande -->
+                                <form method="post" action="{{ path('demande_valider', { id: demande.id }) }}">
+                                    <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                                        Valider
+                                    </button>
+                                </form>
+                                <form method="post" action="{{ path('demande_annuler', { id: demande.id }) }}">
+                                    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                                        Refuser
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="px-4 py-2 text-center text-gray-500">Aucune demande trouvée.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function applyFilter() {
+        const filterValue = document.getElementById('filter').value;
+        window.location.href = "{{ path('boutiquier_demande_list') }}?filter=" + filterValue;
+    }
+    </script>
+{% endblock %}

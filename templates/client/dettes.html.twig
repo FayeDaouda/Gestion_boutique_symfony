@@ -1,0 +1,205 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Dettes{% endblock %}
+
+{% block body %}
+    {% for message in app.flashes('error') %}
+    <div class="bg-red-600 text-white p-4 rounded mb-4">
+        {{ message }}
+    </div>
+    {% endfor %}
+
+        <!-- Dashboard -->
+<div class="grid grid-cols-3 gap-4 mb-4 p-6">
+    <!-- Nombre de dettes -->
+    <div class="bg-gradient-to-b from-green-900 to-green-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <svg class="w-10 h-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2m16 0V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12m16 0H5" />
+            </svg>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Nombres de Dettes</h2>
+            <p class="text-4xl font-bold">{{ dettes|length }}</p>
+            <p class="text-sm">↑ 3.5% depuis le mois dernier</p>
+        </div>
+    </div>
+
+    <!-- Total des dettes -->
+    <div class="bg-gradient-to-b from-yellow-900 to-yellow-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <svg class="w-10 h-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11M9 21V3M17 16h4m-2-2v4m-2 4h4m2-2v4" />
+            </svg>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Total Dettes</h2>
+            <p class="text-4xl font-bold">
+                {% set totalDettes = 0 %}
+                {% for dette in dettes %}
+                    {% set totalDettes = totalDettes + dette.montant %}
+                {% endfor %}
+                {{ totalDettes }} FCFA
+            </p>
+            <p class="text-sm">↑ 5% depuis la semaine dernière</p>
+        </div>
+    </div>
+
+    <!-- Demandes en cours -->
+    <div class="bg-gradient-to-b from-red-900 to-red-500 text-white p-4 rounded shadow flex items-center">
+        <div class="mr-4">
+            <svg class="w-10 h-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7h2m-1-1v2m-9 8a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H8a2 2 0 00-2 2v5zm-6 2a2 2 0 002-2h12m2-6H7" />
+            </svg>
+        </div>
+        <div>
+            <h2 class="text-lg font-bold mb-2">Demandes en Cours</h2>
+            <p class="text-4xl font-bold">
+                {% set demandesEnCours = 0 %}
+                {% for dette in dettes %}
+                    {% if dette.montant - dette.montantVerser > 0 %}
+                        {% set demandesEnCours = demandesEnCours + 1 %}
+                    {% endif %}
+                {% endfor %}
+                {{ demandesEnCours }}
+            </p>
+            <p class="text-sm">↑ 10% depuis hier</p>
+        </div>
+    </div>
+</div>
+
+
+
+        <!-- Header with client details -->
+        <div class="flex justify-between items-center mb-4 p-6 ">
+            <h1 class="text-2xl font-bold">Liste des Dettes pour {{ client.surname }}</h1>
+        </div>
+
+<!-- Tableau des dettes -->
+<table id="table-dettes" class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md ">
+    <thead class="bg-blue-500 text-white">
+        <tr>
+            <th class="px-4 py-2 text-left">Date</th>
+            <th class="px-4 py-2 text-left">Montant</th>
+            <th class="px-4 py-2 text-left">Montant Versé</th>
+            <th class="px-4 py-2 text-left">Montant Restant</th>
+            <th class="px-4 py-2 text-left">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for dette in dettes %}
+            <tr class="border-b hover:bg-gray-100">
+                <td class="px-4 py-2">{{ dette.date | date('d/m/Y') }}</td>
+                <td class="px-4 py-2">{{ dette.montant }} FCFA</td>
+                <td class="px-4 py-2">{{ dette.montantVerser }} FCFA</td>
+                <td class="px-4 py-2">{{ dette.montant - dette.montantVerser }} FCFA</td>
+                <td class="px-4 py-2 flex space-x-2">
+                    <button onclick="openPaymentModal('{{ dette.id }}', '{{ dette.montant - dette.montantVerser }}')" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 focus:outline-none">Payer</button>
+                    <a href="{{ path('dette_details', { id: dette.id }) }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none">Voir</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="5" class="px-4 py-2 text-center text-gray-500">Aucune dette trouvée pour ce client.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination -->
+<div id="pagination-container" class="flex justify-center mt-4 space-x-2"></div>
+
+    </div>
+    <!-- Modal for payment -->
+<div id="paymentModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-1/3">
+        <h2 class="text-xl font-bold mb-4">Effectuer un Paiement</h2>
+        <form method="POST" action="{{ path('dette_payer') }}">
+            <div id="error-message" class="text-red-500 text-sm mb-4"></div>
+
+            <!-- Input pour le montant à payer -->
+            <div class="mb-4">
+                <label for="montantPaye" class="block text-sm font-medium text-gray-700">Montant à payer</label>
+                <input type="number" id="montantPaye" name="montantPaye" class="w-full px-4 py-2 border rounded-lg" placeholder="Entrez le montant" required>
+            </div>
+
+            <!-- Affichage du montant restant -->
+            <div class="mb-4 text-sm text-gray-600">
+                <span id="montantRestant">Montant restant : <strong> </strong></span>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-end">
+                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Payer</button>
+                <button type="button" onclick="closePaymentModal()" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Annuler</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+
+    <!-- Modal and JS -->
+    <script>
+        function openPaymentModal(detteId, montantRestant) {
+            document.getElementById('paymentModal').classList.remove('hidden');
+            document.getElementById('detteId').value = detteId;
+            document.getElementById('montantPaye').setAttribute('max', montantRestant);
+            document.getElementById('montantRestant').innerHTML = `Montant restant : <strong>${montantRestant} FCFA</strong>`;
+        }
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+    const rowsPerPage = 5; // Nombre de lignes par page
+    const table = document.getElementById('table-dettes');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const paginationContainer = document.getElementById('pagination-container');
+
+    // Fonction pour afficher les lignes en fonction de la page
+    function displayRows(page) {
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        rows.forEach((row, index) => {
+            row.style.display = index >= start && index < end ? 'table-row' : 'none';
+        });
+    }
+
+    // Fonction pour créer les boutons de pagination
+    function setupPagination() {
+        const pageCount = Math.ceil(rows.length / rowsPerPage);
+        paginationContainer.innerHTML = ''; // Réinitialiser les boutons
+
+        for (let i = 1; i <= pageCount; i++) {
+            const button = document.createElement('button');
+            button.textContent = i;
+            button.classList.add('bg-blue-500', 'text-white', 'px-4', 'py-2', 'rounded', 'hover:bg-blue-600', 'focus:outline-none');
+
+            // Marquer le bouton actif
+            button.addEventListener('click', () => {
+                document.querySelectorAll('#pagination-container button').forEach(btn => {
+                    btn.classList.remove('bg-blue-700');
+                });
+                button.classList.add('bg-blue-700');
+                displayRows(i);
+            });
+
+            paginationContainer.appendChild(button);
+        }
+
+        // Afficher la première page par défaut
+        if (pageCount > 0) {
+            paginationContainer.querySelector('button').classList.add('bg-blue-700');
+        }
+    }
+
+    // Initialisation
+    displayRows(1);
+    setupPagination();
+});
+
+    </script>
+{% endblock %}

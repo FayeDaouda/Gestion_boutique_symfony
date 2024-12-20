@@ -1,216 +1,285 @@
 <?php
+
 namespace App\Controller;
 
 use App\Entity\Client;
-
-use App\Form\ClientType; 
-use App\Entity\User;  // Importez correctement la classe User
+use App\Entity\User;
 use App\Entity\Dette;
-use App\Form\DetteType;
+use App\Entity\Demande;
+use App\Entity\Paiement;
+use App\Entity\DemandeArticle;
+use App\Repository\DemandeRepository;
+use App\Repository\DetteRepository; // 
+use Doctrine\ORM\Tools\Pagination\Paginator;
+use App\Entity\Article; // Import de l'entité Article
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Bundle\SecurityBundle\Security; // Pour Symfony 5.3 ou ultérieur
+use Knp\Component\Pager\PaginatorInterface; 
 
 class ClientController extends AbstractController
 {
-    
-    // Méthode pour lister les clients et leurs dettes
-#[Route('/clients', name: 'client_list', methods: ['GET'])]
-public function index(EntityManagerInterface $entityManager): Response
-{
-    // Récupérer la liste des clients
-    $clients = $entityManager->getRepository(Client::class)->findAll();
+    private Security $security;
 
-    // Récupérer la liste des utilisateurs
-    $users = $entityManager->getRepository(User::class)->findAll(); // Ajoutez cette ligne
-
-    // Préparer un tableau pour stocker les clients avec le montant dû
-    $clientsWithDebt = [];
-
-    foreach ($clients as $client) {
-        // Calculer le montant total restant pour chaque client
-        $totalMontantRestant = $client->getTotalMontantRestant();  // Utilise la méthode définie dans Client.php
-        
-        // Ajouter le montant dû au tableau avec le client
-        $clientsWithDebt[] = [
-            'client' => $client,
-            'montantRestant' => $totalMontantRestant
-        ];
+    public function __construct(Security $security)
+    {
+        $this->security = $security;
     }
 
-    return $this->render('client/index.html.twig', [
-        'clientsWithDebt' => $clientsWithDebt,
-        'users' => $users, // Assurez-vous de passer la variable 'users' à la vue
+    #[Route('/client/dettes', name: 'client_dettes')]
+    public function listDettes(EntityManagerInterface $entityManager): Response
+    {
+        $user = $this->security->getUser();
+        $client = $entityManager->getRepository(Client::class)->findOneBy(['userAccount' => $user->getId()]);
+
+        if (!$client) {
+            throw $this->createNotFoundException('Client introuvable pour cet utilisateur.');
+        }
+
+        $dettes = $entityManager->getRepository(Dette::class)->findBy(['client' => $client]);
+
+        $totalMontant = array_sum(array_map(fn($dette) => $dette->getMontant(), $dettes));
+        $totalMontantVerser = array_sum(array_map(fn($dette) => $dette->getMontantVerser(), $dettes));
+        $totalMontantRestant = $totalMontant - $totalMontantVerser;
+
+        return $this->render('client/dettes.html.twig', [
+            'client' => $client,
+            'dettes' => $dettes,
+            'totalMontant' => $totalMontant,
+            'totalMontantVerser' => $totalMontantVerser,
+            'totalMontantRestant' => $totalMontantRestant,
+        ]);
+    }
+    
+    #[Route('/client/demandes-dette', name: 'client_demandes_dette')]
+    public function afficherDemandesDette(EntityManagerInterface $entityManager): Response
+    {
+        $user = $this->security->getUser();
+        $client = $entityManager->getRepository(Client::class)->findOneBy(['userAccount' => $user->getId()]);
+
+        if (!$client) {
+            throw $this->createNotFoundException('Client introuvable pour cet utilisateur.');
+        }
+
+        $demandes = $entityManager->getRepository(Demande::class)->findBy(['client' => $client]);
+
+        $totalDemandes = count($demandes);
+        $totalMontant = array_sum(array_map(fn($demande) => $demande->getMontant(), $demandes));
+
+        return $this->render('client/demandes_dette.html.twig', [
+            'client' => $client,
+            'demandes' => $demandes,
+            'totalDemandes' => $totalDemandes,
+            'totalMontant' => $totalMontant,
+        ]);
+    }
+
+   // Route to display the form (GET method)
+#[Route('/client/faire-demande', name: 'faire_demande', methods: ['GET'])]
+public function faireDemande(EntityManagerInterface $entityManager): Response
+{
+    $user = $this->security->getUser();
+
+    // Check if the user is logged in
+    if (!$user) {
+        return $this->redirectToRoute('login'); // Redirect if the user is not logged in
+    }
+
+    // Get the client associated with the user
+    $client = $entityManager->getRepository(Client::class)->findOneBy(['userAccount' => $user->getId()]);
+
+    if (!$client) {
+        throw $this->createNotFoundException('Client not found for this user.');
+    }
+
+    // Get available articles (with quantity in stock > 0)
+    $articles = $entityManager->getRepository(Article::class)->createQueryBuilder('a')
+        ->where('a.quantiteStock > 0') // Ensure column name is correct
+        ->getQuery()
+        ->getResult();
+
+    return $this->render('client/faireDemande.html.twig', [
+        'client' => $client,
+        'articles' => $articles,
     ]);
 }
 
-#[Route('/client/create', name: 'client_create', methods: ['POST'])]
-public function create(Request $request, EntityManagerInterface $entityManager): Response
+#[Route('/client/faire-demande', name: 'faire_demande_post', methods: ['POST'])]
+public function soumettreDemande(Request $request, EntityManagerInterface $entityManager): Response
 {
-    $formData = $request->request->all();
-    $surname = $formData['surname'] ?? null;
-    $telephone = $formData['telephone'] ?? null;
-    $adresse = $formData['adresse'] ?? null;
-    $userAccountId = $formData['user_account_id'] ?? null;
+    // Récupérer l'utilisateur actuellement connecté
+    $utilisateur = $this->security->getUser();
 
-
-
-     // Récupérer la liste des clients
-     $clients = $entityManager->getRepository(Client::class)->findAll();
-
-     // Récupérer la liste des utilisateurs
-     $users = $entityManager->getRepository(User::class)->findAll(); // Ajoutez cette ligne
- 
-     // Préparer un tableau pour stocker les clients avec le montant dû
-     $clientsWithDebt = [];
- 
-     foreach ($clients as $client) {
-         // Calculer le montant total restant pour chaque client
-         $totalMontantRestant = $client->getTotalMontantRestant();  // Utilise la méthode définie dans Client.php
-         
-         // Ajouter le montant dû au tableau avec le client
-         $clientsWithDebt[] = [
-             'client' => $client,
-             'montantRestant' => $totalMontantRestant
-         ];
-     }
-
-    
-
-    // Vérifier que les champs obligatoires sont présents
-    if (!$surname || !$telephone) {
-        $this->addFlash('error', 'Les champs Nom et Téléphone sont obligatoires.');
-        return $this->render('client/index.html.twig', [
-            'clientsWithDebt' => $clientsWithDebt,
-            'users' => $users, // Assurez-vous de passer la variable 'users' à la vue
-        ]);
+    // Vérifier si l'utilisateur est connecté
+    if (!$utilisateur) {
+        return $this->redirectToRoute('login');
     }
 
-    // Vérification d'unicité pour le nom et le téléphone
-    $existingSurname = $entityManager->getRepository(Client::class)->findOneBy(['surname' => $surname]);
-    $existingTelephone = $entityManager->getRepository(Client::class)->findOneBy(['telephone' => $telephone]);
+    // Récupérer le client associé à l'utilisateur
+    $client = $entityManager->getRepository(Client::class)->findOneBy(['userAccount' => $utilisateur->getId()]);
 
-    if ($existingSurname) {
-        $this->addFlash('error', 'Un client avec ce nom existe déjà.');
-        return $this->render('client/index.html.twig', [
-            'clientsWithDebt' => $clientsWithDebt,
-            'users' => $users, // Assurez-vous de passer la variable 'users' à la vue
-        ]);
-        
+    if (!$client) {
+        throw $this->createNotFoundException('Client non trouvé pour cet utilisateur.');
     }
 
-    if ($existingTelephone) {
-        $this->addFlash('error', 'Un client avec ce téléphone existe déjà.');
-        return $this->render('client/index.html.twig', [
-            'clientsWithDebt' => $clientsWithDebt,
-            'users' => $users, // Assurez-vous de passer la variable 'users' à la vue
-        ]);
-        
+    // Récupérer les articles sélectionnés depuis la requête (données JSON)
+    $data = json_decode($request->getContent(), true);
+    $articlesSelectionnes = $data['products'] ?? [];
+    $montantTotal = $data['total'] ?? 0;
+
+    // Vérifier si des articles ont été sélectionnés
+    if (empty($articlesSelectionnes)) {
+        return $this->json(['success' => false, 'message' => 'Aucun article sélectionné.']);
     }
 
-    // Créer et remplir l'entité Client
-    $client = new Client();
-    $client->setSurname($surname);
-    $client->setTelephone($telephone);
-    $client->setAdresse($adresse);
+    // Créer une nouvelle demande
+    $demande = new Demande();
+    $demande->setClient($client);
+    $demande->setEtat('En Cours'); // Statut initial de la demande
+    $demande->setDateDemande(new \DateTime()); // Date actuelle
+    $demande->setMontant($montantTotal);
 
-    if ($userAccountId) {
-        $userAccount = $entityManager->getRepository(User::class)->find($userAccountId);
-        if ($userAccount) {
-            $client->setUserAccount($userAccount);
-        } else {
-            $this->addFlash('error', 'Utilisateur non trouvé.');
-            return $this->redirectToRoute('client_create');
+    // Parcourir les articles sélectionnés et vérifier le stock
+    foreach ($articlesSelectionnes as $articleData) {
+        $article = $entityManager->getRepository(Article::class)->find($articleData['id']);
+
+        if (!$article) {
+            return $this->json(['success' => false, 'message' => "Article introuvable (ID: {$articleData['id']})"]);
+        }
+
+        if ($article->getQuantiteStock() < $articleData['quantity']) {
+            return $this->json(['success' => false, 'message' => "Stock insuffisant pour l'article : {$article->getNom()}"]);
         }
     }
 
-    // Sauvegarde dans la base de données
-    $entityManager->persist($client);
+    // Sauvegarder la demande
+    $entityManager->persist($demande);
+    $entityManager->flush(); // À ce stade, la demande a un ID généré
+
+    // Insérer les données dans la table d'association demande_article
+    foreach ($articlesSelectionnes as $articleData) {
+        $article = $entityManager->getRepository(Article::class)->find($articleData['id']);
+
+        // Ajouter la relation dans la table demande_article
+        $conn = $entityManager->getConnection();
+        $conn->insert('demande_article', [
+            'demande_id' => $demande->getId(),
+            'article_id' => $article->getId(),
+            'quantite' => $articleData['quantity'],
+        ]);
+
+        // Mettre à jour le stock de l'article
+        $article->setQuantiteStock($article->getQuantiteStock() - $articleData['quantity']);
+        $entityManager->persist($article);
+    }
+
+    // Sauvegarder les modifications
     $entityManager->flush();
 
-    return $this->redirectToRoute('client_show', ['id' => $client->getId()]);
+    // Retourner une réponse de succès
+    return $this->json(['success' => true, 'message' => 'Demande soumise avec succès.']);
+}
+
+
+#[Route('/client/dette/{id}/relancer', name: 'client_relancer_dette', methods: ['POST'])]
+public function relancerDette(int $id, DemandeRepository $demandeRepository, EntityManagerInterface $entityManager): Response
+{
+    // Récupérer la demande par ID
+    $demande = $demandeRepository->find($id);
+
+    if (!$demande) {
+        throw $this->createNotFoundException('La demande est introuvable.');
+    }
+
+    // Vérifier si la demande est annulée
+    if ($demande->getEtat() !== 'annuler') {
+        $this->addFlash('error', 'Seules les demandes annulées peuvent être relancées.');
+        return $this->redirectToRoute('client_demandes_dette'); // Rediriger vers la page des demandes
+    }
+
+    // Modifier l'état de la demande pour indiquer qu'elle est relancée
+    $demande->setEtat('Relancée'); // Nouveau statut
+    
+
+    // Persister les changements
+    $entityManager->persist($demande);
+    $entityManager->flush();
+
+    // Ajouter un message de succès
+    $this->addFlash('success', 'La demande a été relancée avec succès.');
+
+    // Redirection après l'action
+    return $this->redirectToRoute('client_demandes_dette'); // Vers la liste des demandes
+}
+
+
+#[Route('/dette/payer', name: 'dette_payer', methods: ['POST'])]
+ public function payerDette(Request $request, DetteRepository $detteRepository, EntityManagerInterface $em): Response
+{
+    $detteId = $request->request->get('dette_id');
+    $montantPaye = $request->request->get('montantPaye');
+
+    $dette = $detteRepository->find($detteId);
+    if (!$dette) {
+        $this->addFlash('error', 'Dette introuvable.');
+        return $this->redirectToRoute('dette_list');
+    }
+
+    if ($montantPaye > ($dette->getMontant() - $dette->getMontantVerser())) {
+        $this->addFlash('error', 'Montant payé dépasse le montant restant.');
+        return $this->redirectToRoute('dette_list');
+    }
+
+    // Mettre à jour la dette
+    $dette->setMontantVerser($dette->getMontantVerser() + $montantPaye);
+    $em->persist($dette);
+    $em->flush();
+
+    // Créer un nouvel enregistrement dans la table paiements
+    $paiement = new Paiement();
+    $paiement->setDette($dette);
+    $paiement->setMontant($montantPaye);
+    $paiement->setDate(new \DateTime()); // La date actuelle du paiement
+
+    $em->persist($paiement);
+    $em->flush();
+
+    $this->addFlash('success', 'Paiement enregistré avec succès.');
+    
+    // Rediriger vers l'URL spécifiée
+    return $this->redirect('http://127.0.0.1:8000/client/dettes');
+}
+
+#[Route('/client/dette/{id}/details', name: 'dette_details')]
+public function afficherDetailsDette(int $id, EntityManagerInterface $entityManager): Response
+{
+    $user = $this->security->getUser();
+    $client = $entityManager->getRepository(Client::class)->findOneBy(['userAccount' => $user->getId()]);
+
+    if (!$client) {
+        throw $this->createNotFoundException('Client introuvable pour cet utilisateur.');
+    }
+
+    $dette = $entityManager->getRepository(Dette::class)->findOneBy(['id' => $id, 'client' => $client]);
+
+    if (!$dette) {
+        throw $this->createNotFoundException('Dette introuvable ou non associée au client connecté.');
+    }
+
+    $paiements = $dette->getPaiements();
+    $articles = $dette->getArticles();
+
+    return $this->render('client/dette_details.html.twig', [
+        'dette' => $dette,
+        'paiements' => $paiements,
+        'articles' => $articles,
+    ]);
 }
 
 
 
-    // Méthode pour afficher un client spécifique avec ses dettes
-    #[Route('/client/{id}', name: 'client_show', methods: ['GET', 'POST'])]
-    public function show($id, Request $request, EntityManagerInterface $entityManager): Response
-    {
-        // Récupérer le client
-        $client = $entityManager->getRepository(Client::class)->find($id);
-
-        // Récupérer la valeur du filtre
-        $filter = $request->query->get('filter', 'all');  // Valeur par défaut : 'all'
-
-        // Appliquer le filtre sur les dettes
-        $queryBuilder = $entityManager->getRepository(Dette::class)->createQueryBuilder('d')
-            ->where('d.client = :client')
-            ->setParameter('client', $client);
-
-        // Filtrer en fonction du statut
-        if ($filter === 'solder') {
-            $queryBuilder->andWhere('d.montant = d.montantVerser');
-        } elseif ($filter === 'non_solder') {
-            $queryBuilder->andWhere('d.montant != d.montantVerser');
-        }
-
-        // Exécuter la requête
-        $dettes = $queryBuilder->getQuery()->getResult();
-
-        // Calculer les montants totaux
-        $totalMontant = 0;
-        $totalMontantVerser = 0;
-        $totalMontantRestant = 0;
-
-        foreach ($dettes as $dette) {
-            $totalMontant += $dette->getMontant();
-            $totalMontantVerser += $dette->getMontantVerser();
-            $totalMontantRestant += ($dette->getMontant() - $dette->getMontantVerser());
-        }
-
-        // Retourner la vue avec les dettes filtrées
-        return $this->render('client/show.html.twig', [
-            'client' => $client,
-            'dettes' => $dettes,
-            'totalMontant' => $totalMontant,
-            'totalMontantVerser' => $totalMontantVerser,
-            'totalMontantRestant' => $totalMontantRestant,
-        ]);
-    }
-
-    // Méthode pour afficher les détails d'un client
-    #[Route('/client/{id}/details', name: 'client_details')]
-    public function clientDetails(Client $client): Response
-    {
-        // Récupérer toutes les dettes du client
-        $dettes = $this->getDoctrine()
-            ->getRepository(Dette::class)
-            ->findBy(['client' => $client]);
-
-        // Calculer le total des montants, des montants versés, et des montants restants
-        $totalMontant = 0;
-        $totalMontantVerser = 0;
-        $totalMontantRestant = 0;
-
-        foreach ($dettes as $dette) {
-            $totalMontant += $dette->getMontant();
-            $totalMontantVerser += $dette->getMontantVerser();
-            $totalMontantRestant += ($dette->getMontant() - $dette->getMontantVerser());
-        }
-
-        return $this->render('client/details.html.twig', [
-            'client' => $client,
-            'dettes' => $dettes,
-            'totalMontant' => $totalMontant,
-            'totalMontantVerser' => $totalMontantVerser,
-            'totalMontantRestant' => $totalMontantRestant,
-        ]);
-    }
-
-
-   
 
 }

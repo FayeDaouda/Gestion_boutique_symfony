@@ -18,8 +18,8 @@ class Article
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
-    #[ORM\Column]
-    private ?int $quantitéStock = null;
+    #[ORM\Column(name: "quantite_stock")]
+    private ?int $quantiteStock = null;
 
     #[ORM\Column]
     private ?float $prix = null;
@@ -30,9 +30,16 @@ class Article
     #[ORM\ManyToMany(targetEntity: Dette::class, mappedBy: 'articles')]
     private Collection $dettes;
 
+    /**
+     * @var Collection<int, DemandeArticle>
+     */
+    #[ORM\OneToMany(targetEntity: DemandeArticle::class, mappedBy: 'article', cascade: ['persist', 'remove'])]
+    private Collection $demandeArticles;
+
     public function __construct()
     {
         $this->dettes = new ArrayCollection();
+        $this->demandeArticles = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -52,14 +59,14 @@ class Article
         return $this;
     }
 
-    public function getQuantitéStock(): ?int
+    public function getQuantiteStock(): ?int
     {
-        return $this->quantitéStock;
+        return $this->quantiteStock;
     }
 
-    public function setQuantitéStock(int $quantitéStock): static
+    public function setQuantiteStock(int $quantiteStock): static
     {
-        $this->quantitéStock = $quantitéStock;
+        $this->quantiteStock = $quantiteStock;
 
         return $this;
     }
@@ -98,6 +105,35 @@ class Article
     {
         if ($this->dettes->removeElement($dette)) {
             $dette->removeArticle($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, DemandeArticle>
+     */
+    public function getDemandeArticles(): Collection
+    {
+        return $this->demandeArticles;
+    }
+
+    public function addDemandeArticle(DemandeArticle $demandeArticle): static
+    {
+        if (!$this->demandeArticles->contains($demandeArticle)) {
+            $this->demandeArticles->add($demandeArticle);
+            $demandeArticle->setArticle($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDemandeArticle(DemandeArticle $demandeArticle): static
+    {
+        if ($this->demandeArticles->removeElement($demandeArticle)) {
+            if ($demandeArticle->getArticle() === $this) {
+                $demandeArticle->setArticle(null);
+            }
         }
 
         return $this;

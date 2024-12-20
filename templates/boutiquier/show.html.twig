@@ -1,0 +1,126 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails du Client{% endblock %}
+
+{% block body %}
+
+{% if formData is defined %}
+    <h2>Informations récupérées du formulaire :</h2>
+    <ul>
+        <li>Montant : {{ formData.montant }}</li>
+        <li>Montant versé : {{ formData.montantVerser }}</li>
+    </ul>
+{% endif %}
+
+
+{% for message in app.flashes('error') %}
+    <div class="bg-red-600 text-white p-4 rounded mb-4">
+        {{ message }}
+    </div>
+{% endfor %}
+
+<div class="container mx-auto p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">Détails du Client - {{ client.surname }}</h1>
+        <a href="{{ path('boutiquier_client_list') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Retour à la liste</a>
+    </div>
+
+    <!-- Profil du client et résumé des dettes alignés horizontalement -->
+    <div class="flex space-x-4 mb-8">
+        <div class="w-1/2 bg-gradient-to-r from-blue-500 to-gray-900 p-4 rounded-lg text-white">
+            <h2 class="text-xl font-semibold mb-4">Profil du Client</h2>
+            <p><strong>Nom :</strong> {{ client.surname }}</p>
+            <p><strong>Téléphone :</strong> {{ client.telephone }}</p>
+            <p><strong>Adresse :</strong> {{ client.adresse }}</p>
+        </div>
+        <div class="w-1/2 bg-gradient-to-r from-blue-500 to-gray-900 p-4 rounded-lg text-white">
+            <h2 class="text-xl font-semibold mb-4">Résumé des Dettes</h2>
+            <p><strong>Montant Total :</strong> {{ totalMontant }} Fcfa</p>
+            <p><strong>Montant Versé :</strong> {{ totalMontantVerser }} Fcfa</p>
+            <p><strong>Montant Restant :</strong> {{ totalMontantRestant }} Fcfa</p>
+        </div>
+    </div>
+
+    <!-- Filtre des dettes et bouton Ajouter une Dette -->
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <label for="filter" class="mr-2 font-semibold">Filtrer les dettes :</label>
+            <select id="filter" class="p-2 border border-gray-300 rounded" onchange="applyFilter()">
+                <option value="all" {% if app.request.query.get('filter') == 'all' %}selected{% endif %}>Tous</option>
+                <option value="solder" {% if app.request.query.get('filter') == 'solder' %}selected{% endif %}>Soldé</option>
+                <option value="non_solder" {% if app.request.query.get('filter') == 'non_solder' %}selected{% endif %}>Non Soldé</option>
+            </select>
+        </div>
+        <a href="{{ path('add_det', { 'id': client.id }) }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+            Ajouter une Dette
+        </a>
+
+
+    </div>
+
+    <!-- Tableau des dettes -->
+    <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+        <thead class="bg-blue-500 text-white">
+            <tr>
+                <th class="px-4 py-2 text-left">Date</th>
+                <th class="px-4 py-2 text-left">Montant</th>
+                <th class="px-4 py-2 text-left">Montant Versé</th>
+                <th class="px-4 py-2 text-left">Montant Restant</th>
+                <th class="px-4 py-2 text-left">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="dette-table-body">
+            {% for dette in dettes %}
+                <tr class="border-b hover:bg-gray-100" data-solder="{{ dette.montant - dette.montantVerser == 0 ? 'solder' : 'non_solder' }}">
+                    <td class="px-4 py-2">{{ dette.date | date('d/m/Y') }}</td>
+                    <td class="px-4 py-2">{{ dette.montant }} Fcfa</td>
+                    <td class="px-4 py-2">{{ dette.montantVerser }} Fcfa</td>
+                    <td class="px-4 py-2">{{ dette.montant - dette.montantVerser }} Fcfa</td>
+                    <td class="px-4 py-2">
+                        <a href="{{ path('dette_details', { 'id': dette.id }) }}" class="text-blue-500 hover:underline">Voir les Paiements</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5" class="px-4 py-2 text-center text-gray-500">Aucune dette trouvée pour ce client.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<script>
+    function applyFilter() {
+        const filterValue = document.getElementById('filter').value;
+        window.location.href = "{{ path('boutiquier_client_show', { 'id': client.id }) }}?filter=" + filterValue;
+    }
+    // Récupérer les éléments du DOM
+const openModalButton = document.getElementById('openModalButton');
+const addDebtModal = document.getElementById('addDebtModal');
+const closeModalButton = document.getElementById('closeModalBtn');
+
+// Vérification de l'existence des éléments avant d'ajouter les événements
+if (openModalButton && addDebtModal && closeModalButton) {
+    
+    // Afficher la pop-up lorsqu'on clique sur "Ajouter une Dette"
+    openModalButton.addEventListener('click', () => {
+        addDebtModal.classList.remove('hidden'); // Afficher la pop-up
+    });
+
+    // Fermer la pop-up lorsqu'on clique sur "Annuler"
+    closeModalButton.addEventListener('click', () => {
+        addDebtModal.classList.add('hidden'); // Masquer la pop-up
+    });
+
+    // Fermer la pop-up si l'utilisateur clique à l'extérieur de la fenêtre modale
+    window.addEventListener('click', (event) => {
+        // Fermer si l'on clique à l'extérieur de la modale mais pas sur le contenu de celle-ci
+        if (event.target === addDebtModal) {
+            addDebtModal.classList.add('hidden'); // Masquer la pop-up
+        }
+    });
+}
+
+</script>
+{% endblock %}

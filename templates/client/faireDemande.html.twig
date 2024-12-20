@@ -1,0 +1,219 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container mx-auto p-6">
+  <div class="grid grid-cols-2 gap-4">
+        <!-- Section gauche : Liste des articles disponibles -->
+        <div>
+            <h2 class="text-xl font-bold mb-4">Articles Disponibles</h2>
+            <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+                <thead class="bg-blue-500 text-white">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Article</th>
+                        <th class="px-4 py-2 text-left">Prix (FCFA)</th>
+                        <th class="px-4 py-2 text-left">Qte en Stock</th>
+                        <th class="px-4 py-2 text-left">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for article in articles %}
+                        <tr class="border-b hover:bg-gray-100">
+                            <td class="px-4 py-2">{{ article.nom }}</td>
+                            <td class="px-4 py-2">{{ article.prix }}</td>
+                            <td class="px-4 py-2">{{ article.quantiteStock }}</td>
+                            <td class="px-4 py-2">
+                                <button onclick="addToSelection({{ article.id }}, '{{ article.nom }}', {{ article.prix }}, {{ article.quantitestock }})" 
+                                    class="text-green-500 hover:underline">
+                                    Ajouter
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Section droite : Liste des articles sélectionnés -->
+        <div>
+            <h2 class="text-xl font-bold mb-4">Produits Sélectionnés</h2>
+            <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+                <thead class="bg-green-500 text-white">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Article</th>
+                        <th class="px-4 py-2 text-left">Prix (FCFA)</th>
+                        <th class="px-4 py-2 text-left">Quantité</th>
+                        <th class="px-4 py-2 text-left">Montant (FCFA)</th>
+                        <th class="px-4 py-2 text-left">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="selected-products">
+                    <!-- Articles sélectionnés dynamiquement -->
+                </tbody>
+            </table>
+
+            <div class="mt-4 text-right">
+                <h3 class="text-lg font-bold">Total : <span id="total-amount">0</span> FCFA</h3>
+                <button onclick="validateOrder()" class="bg-blue-500 text-white px-4 py-2 rounded">Valider la Commande</button>
+                <button onclick="cancelOrder()" class="bg-red-500 text-white px-4 py-2 rounded">Annuler</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables pour stocker les produits sélectionnés et le total
+    let selectedProducts = [];
+    let totalAmount = 0;
+
+    // Fonction pour ajouter un produit à la sélection
+    function addToSelection(id, nom, prix, quantiteStock) {
+        const existingProduct = selectedProducts.find(product => product.id === id);
+
+        if (existingProduct) {
+            alert('Cet article est déjà ajouté.');
+            return;
+        }
+
+        selectedProducts.push({
+            id,
+            nom,
+            prix,
+            quantite: 1,
+            quantiteStock,
+            montant: prix,
+        });
+
+        updateTable();
+    }
+
+    // Fonction pour mettre à jour le tableau des produits sélectionnés
+    function updateTable() {
+        const tbody = document.getElementById('selected-products');
+        tbody.innerHTML = '';
+
+        totalAmount = 0;
+
+        selectedProducts.forEach((product, index) => {
+            totalAmount += product.montant;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="px-4 py-2">${product.nom}</td>
+                    <td class="px-4 py-2">${product.prix}</td>
+                    <td class="px-4 py-2">
+                        <input type="number" value="${product.quantite}" min="1" max="${product.quantiteStock}" 
+                            onchange="updateQuantity(${index}, this.value)" 
+                            class="border border-gray-300 rounded p-1 w-16">
+                    </td>
+                    <td class="px-4 py-2">${product.montant}</td>
+                    <td class="px-4 py-2">
+                        <button onclick="removeFromSelection(${index})" class="text-red-500 hover:underline">
+                            Supprimer
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('total-amount').textContent = totalAmount;
+    }
+
+    // Fonction pour mettre à jour la quantité et le montant
+    function updateQuantity(index, newQuantity) {
+        const product = selectedProducts[index];
+        const quantity = parseInt(newQuantity);
+
+        if (quantity > 0 && quantity <= product.quantiteStock) {
+            product.quantite = quantity;
+            product.montant = product.prix * quantity;
+            updateTable();
+        } else {
+            alert('Quantité invalide.');
+        }
+    }
+
+    // Fonction pour supprimer un produit de la sélection
+    function removeFromSelection(index) {
+        selectedProducts.splice(index, 1);
+        updateTable();
+    }
+
+   
+    // Fonction pour valider la commande
+    function validateOrder() {
+    if (selectedProducts.length === 0) {
+        alert('Aucun produit sélectionné.');
+        return;
+    }
+
+    // Calculer le total
+    const total = selectedProducts.reduce((sum, product) => sum + product.montant, 0);
+
+    // Construire l'objet de la commande avec ID et quantité
+    let orderData = {
+        products: selectedProducts.map(product => ({
+            id: product.id,
+            quantity: product.quantite // Inclure la quantité
+        })),
+        total
+    };
+
+    // Modifications avant l'envoi, par exemple ajouter un champ supplémentaire ou transformer les données
+    // Exemple : Ajouter un champ 'order_date'
+    orderData.order_date = new Date().toISOString();  // Ajouter la date de la commande
+
+    // Exemple : Si vous voulez multiplier la quantité par 2 avant l'envoi
+    orderData.products = orderData.products.map(product => ({
+        ...product,
+        quantity: product.quantity * 2 // Modifier la quantité (exemple)
+    }));
+
+    // Afficher les données modifiées
+    console.log("Données à envoyer :", JSON.stringify(orderData));
+
+    // Envoyer les données au backend via fetch
+    fetch('/client/faire-demande', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)  // Envoi de l'objet modifié
+    })
+     .then(response => {
+        // Vérifier si la réponse est au format JSON
+        if (response.ok) {
+            return response.json();  // Tenter de parser en JSON si la réponse est OK
+            
+        } else {
+            return response.text().then(text => { // Si ce n'est pas JSON, récupérer la réponse brute
+                 
+            });
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            alert('Commande validée avec succès !');
+            window.location.href = '/client/demandes-dette';
+        } else {
+            alert('Erreur lors de la validation de la commande.');
+        }
+        console.log("Données avant envoi : ", data); 
+    })
+    .catch(error => {
+        alert('Une erreur est survenue lors de la validation de la commande.');
+        console.error('Détail de l\'erreur : ', error);
+        
+    });
+}
+
+
+    // Fonction pour annuler la commande
+    function cancelOrder() {
+        if (confirm('Voulez-vous vraiment annuler la commande ?')) {
+            selectedProducts = [];
+            totalAmount = 0;
+            updateTable();
+        }
+    }
+</script>
+{% endblock %}

@@ -2,37 +2,39 @@
 
 namespace App\Entity;
 
+use App\Repository\DemandeArticleRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
-#[ORM\Entity(repositoryClass: DetteArticleRepository::class)]
-#[ORM\Table(name: 'dette_article')]
-class DetteArticle
+#[ORM\Entity(repositoryClass: DemandeArticleRepository::class)]
+#[ORM\Table(name: 'demande_article')] // Spécifie le nom de la table
+class DemandeArticle
 {
     #[ORM\Id]
-    #[ORM\ManyToOne(targetEntity: Dette::class, inversedBy: 'detteArticles')]
+    #[ORM\ManyToOne(inversedBy: 'demandeArticles')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private ?Dette $dette = null;
+    private ?Demande $demande = null;
 
     #[ORM\Id]
-    #[ORM\ManyToOne(targetEntity: Article::class, inversedBy: 'detteArticles')]
+    #[ORM\ManyToOne(inversedBy: 'demandeArticles')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Article $article = null;
 
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column]
     #[Assert\NotNull(message: 'La quantité est obligatoire.')]
     #[Assert\Positive(message: 'La quantité doit être un nombre positif.')]
     private ?int $quantite = null;
 
     // Getters et Setters
-    public function getDette(): ?Dette
+    public function getDemande(): ?Demande
     {
-        return $this->dette;
+        return $this->demande;
     }
 
-    public function setDette(?Dette $dette): static
+    public function setDemande(?Demande $demande): static
     {
-        $this->dette = $dette;
+        $this->demande = $demande;
+
         return $this;
     }
 
@@ -44,6 +46,7 @@ class DetteArticle
     public function setArticle(?Article $article): static
     {
         $this->article = $article;
+
         return $this;
     }
 
@@ -55,6 +58,7 @@ class DetteArticle
     public function setQuantite(int $quantite): static
     {
         $this->quantite = $quantite;
+
         return $this;
     }
 }

@@ -1,0 +1,223 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container mx-auto p-6">
+  <div class="grid grid-cols-2 gap-4">
+        <!-- Section gauche : Liste des articles disponibles -->
+        <div>
+            <h2 class="text-xl font-bold mb-4">Articles Disponibles</h2>
+            <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+                <thead class="bg-blue-500 text-white">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Article</th>
+                        <th class="px-4 py-2 text-left">Prix (FCFA)</th>
+                        <th class="px-4 py-2 text-left">Qte en Stock</th>
+                        <th class="px-4 py-2 text-left">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for article in articles %}
+                        <tr class="border-b hover:bg-gray-100">
+                            <td class="px-4 py-2">{{ article.nom }}</td>
+                            <td class="px-4 py-2">{{ article.prix }}</td>
+                            <td class="px-4 py-2">{{ article.quantiteStock }}</td>
+                            <td class="px-4 py-2">
+                                <button onclick="addToSelection({{ article.id }}, '{{ article.nom }}', {{ article.prix }}, {{ article.quantitestock }})" 
+                                    class="text-green-500 hover:underline">
+                                    Ajouter
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Section droite : Liste des articles sélectionnés -->
+        <div>
+            <h2 class="text-xl font-bold mb-4">Produits Sélectionnés</h2>
+            <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+                <thead class="bg-green-500 text-white">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Article</th>
+                        <th class="px-4 py-2 text-left">Prix (FCFA)</th>
+                        <th class="px-4 py-2 text-left">Quantité</th>
+                        <th class="px-4 py-2 text-left">Montant (FCFA)</th>
+                        <th class="px-4 py-2 text-left">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="selected-products">
+                    <!-- Articles sélectionnés dynamiquement -->
+                </tbody>
+            </table>
+
+            <div class="mt-4 text-right">
+                <h3 class="text-lg font-bold">Total : <span id="total-amount">0</span> FCFA</h3>
+                <button onclick="validateDebt()" class="bg-blue-500 text-white px-4 py-2 rounded">Valider la Dette</button>
+                <button onclick="cancelOrder()" class="bg-red-500 text-white px-4 py-2 rounded">Annuler</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables pour stocker les produits sélectionnés et le total
+    let selectedProducts = [];
+    let totalAmount = 0;
+
+    // Fonction pour ajouter un produit à la sélection
+    function addToSelection(id, nom, prix, quantiteStock) {
+        const existingProduct = selectedProducts.find(product => product.id === id);
+
+        if (existingProduct) {
+            alert('Cet article est déjà ajouté.');
+            return;
+        }
+
+        selectedProducts.push({
+            id,
+            nom,
+            prix,
+            quantite: 1,
+            quantiteStock,
+            montant: prix,
+        });
+
+        updateTable();
+    }
+
+    // Fonction pour mettre à jour le tableau des produits sélectionnés
+    function updateTable() {
+        const tbody = document.getElementById('selected-products');
+        tbody.innerHTML = '';
+
+        totalAmount = 0;
+
+        selectedProducts.forEach((product, index) => {
+            totalAmount += product.montant;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="px-4 py-2">${product.nom}</td>
+                    <td class="px-4 py-2">${product.prix}</td>
+                    <td class="px-4 py-2">
+                        <input type="number" value="${product.quantite}" min="1" max="${product.quantiteStock}" 
+                            onchange="updateQuantity(${index}, this.value)" 
+                            class="border border-gray-300 rounded p-1 w-16">
+                    </td>
+                    <td class="px-4 py-2">${product.montant}</td>
+                    <td class="px-4 py-2">
+                        <button onclick="removeFromSelection(${index})" class="text-red-500 hover:underline">
+                            Supprimer
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('total-amount').textContent = totalAmount;
+    }
+
+    // Fonction pour mettre à jour la quantité et le montant
+    function updateQuantity(index, newQuantity) {
+        const product = selectedProducts[index];
+        const quantity = parseInt(newQuantity);
+
+        if (quantity > 0 && quantity <= product.quantiteStock) {
+            product.quantite = quantity;
+            product.montant = product.prix * quantity;
+            updateTable();
+        } else {
+            alert('Quantité invalide.');
+        }
+    }
+
+    // Fonction pour supprimer un produit de la sélection
+    function removeFromSelection(index) {
+        selectedProducts.splice(index, 1);
+        updateTable();
+    }
+    
+
+   // Récupérer l'ID du client depuis l'URL
+function getClientIdFromUrl() {
+    // Récupérer l'URL actuelle
+    let url = window.location.href;
+    
+    // Extraire l'ID du client en splittant l'URL
+    let urlParts = url.split('/');
+    let clientId = urlParts[4]; // L'ID du client est à l'index 4 de l'URL (après /client/ et avant /add-dette)
+    
+    return clientId;
+}
+
+    function validateDebt() {
+    if (selectedProducts.length === 0) {
+        alert('Aucun produit sélectionné.');
+        return;
+    }
+
+    // Récupérer l'ID du client
+    let clientId = getClientIdFromUrl();
+
+    // Construire l'objet de la dette
+    let debtData = {
+        products: selectedProducts.map(product => ({
+            id: product.id,
+            quantity: product.quantite
+        })),
+        total: totalAmount,
+        clientId: clientId // Utilisation de l'ID récupéré depuis l'URL
+    };
+
+    console.log('Données de la dette envoyées:', debtData);
+
+    // Ajouter la dette dans la base de données
+    fetch('/boutiquier/ajouter-dette', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(debtData)
+})
+.then(response => response.text()) // Utilisez .text() pour récupérer la réponse brute
+.then(data => {
+    console.log('Réponse brute du serveur:', data); // Affichez la réponse brute
+    try {
+        const jsonData = JSON.parse(data); // Essayez de parser le JSON
+        if (jsonData.success) {
+           // Revenir à la page précédente après avoir cliqué sur "OK"
+            window.history.back();
+
+            // Recharger la page pour mettre à jour son contenu
+            setTimeout(function() {
+                window.location.reload();
+            }, 100);  // Le délai de 100ms est donné pour permettre au navigateur de traiter l'historique avant de recharger
+                    
+        } else {
+            alert('Erreur lors de l\'ajout de la dette : ' + jsonData.error);
+        }
+    } catch (e) {
+        alert('Erreur : La réponse n\'est pas au format JSON.');
+        console.error('Erreur de parsing JSON:', e);
+    }
+})
+.catch(error => {
+    alert('Une erreur est survenue lors de l\'ajout de la dette.');
+    console.error('Erreur:', error);
+});
+
+}
+
+
+// Fonction pour annuler la commande
+function cancelOrder() {
+    if (confirm('Voulez-vous vraiment annuler la commande ?')) {
+        selectedProducts = [];
+        totalAmount = 0;
+        updateTable();
+    }
+}
+
+</script>
+{% endblock %}

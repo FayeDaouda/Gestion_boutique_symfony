@@ -85,7 +85,7 @@
                     <select id="user_account_id" name="user_account_id" class="w-full px-4 py-2 border rounded-lg">
                         <option value="">Aucun utilisateur</option>
                         {% for user in users %}
-                            <option value="{{ user.id }}">{{ user.username }}</option>
+                            <option value="{{ user.id }}">{{ user.login }}</option>
                         {% endfor %}
                     </select>
                 </div>

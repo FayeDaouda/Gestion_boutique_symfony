@@ -3,47 +3,77 @@
 {% block title %}Détails de la Dette{% endblock %}
 
 {% block body %}
-<div class="container mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-4">Détails de la Dette</h1>
+    <div class="container mx-auto p-6">
+        
 
-    <!-- Informations sur la dette -->
-    <div class="bg-gray-100 p-4 rounded-lg mb-6">
-        <p><strong>Date :</strong> {{ dette.date | date('d/m/Y') }}</p>
-        <p><strong>Montant :</strong> {{ dette.montant }} €</p>
-        <p><strong>Montant Versé :</strong> {{ dette.montantVerser }} €</p>
-        <p><strong>Montant Restant :</strong> {{ dette.montant - dette.montantVerser }} €</p>
+        <div class="relative container mx-auto p-6">
+       <h1 class="text-xl font-bold  mb-4">Détails de la Dette</h1>
+
+        <h2 class="text-lg font-bold">Montant Total : {{ dette.montant }} FCFA</h2>
+        <h3 class="text-md font-bold mt-2">Montant Versé : {{ dette.montantVerser }} FCFA</h3>
+        <h3 class="text-md font-bold mt-2">Montant Restant : {{ dette.montant - dette.montantVerser }} FCFA</h3>
+        <div class="absolute top-6 right-6">
+            <a href="http://127.0.0.1:8000/" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600">
+                <!-- Icône maison en SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10l7-7m0 0l7 7M5 12v10h14V12m-9 10V9" />
+                </svg>
+                Retour à la Page d'Accueil
+            </a>
+        </div>
+
+        <hr class="my-4">
+
+        <h2 class="text-lg font-bold mb-2">Articles Associés</h2>
+        <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+            <thead class="bg-blue-500 text-white">
+                <tr>
+                    <th class="px-4 py-2 text-left">Nom</th>
+                    <th class="px-4 py-2 text-left">Prix (FCFA)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles %}
+                    <tr class="border-b hover:bg-gray-100">
+                        <td class="px-4 py-2">{{ article.nom }}</td>
+                        <td class="px-4 py-2">{{ article.prix }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="2" class="border border-gray-400 px-4 py-2 text-center">Aucun article associé à cette dette.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <hr class="my-4">
+
+        <h2 class="text-lg font-bold mb-2">Paiements</h2>
+        <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
+            <thead class="bg-blue-500 text-white">
+                <tr>
+                    <th class="px-4 py-2 text-left">Montant (FCFA)</th>
+                    <th class="px-4 py-2 text-left">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for paiement in paiements %}
+                    <tr class="border-b hover:bg-gray-100">
+                        <td class="px-4 py-2">{{ paiement.montant }}</td>
+                        <td class="px-4 py-2">{{ paiement.date|date('d/m/Y') }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="2" class="border border-gray-400 px-4 py-2 text-center">Aucun paiement effectué pour cette dette.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <hr class="my-4">
+
+       
+
+
     </div>
-
-        <!-- Liste des articles associés -->
-    <h2 class="text-xl font-semibold mb-4">Articles associés</h2>
-    {% if articles is not empty %}
-        <ul class="list-disc list-inside mb-6">
-            {% for article in articles %}
-                <li>{{ article.nom }} ({{ article.prix }} €)</li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="text-gray-500">Aucun article associé à cette dette.</p>
-    {% endif %}
-
-
-    <!-- Liste des paiements associés -->
-    <h2 class="text-xl font-semibold mb-4">Paiements associés</h2>
-    {% if paiements is not empty %}
-        <ul class="list-disc list-inside">
-            {% for paiement in paiements %}
-                <li>
-                    <strong>Date :</strong> {{ paiement.date | date('d/m/Y') }},
-                    <strong>Montant :</strong> {{ paiement.amount }} €
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="text-gray-500">Aucun paiement enregistré pour cette dette.</p>
-    {% endif %}
-
-    <a href="{{ path('client_show', {'id': dette.client.id}) }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-        Retour au client
-    </a>
-</div>
 {% endblock %}

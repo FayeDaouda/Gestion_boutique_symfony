@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Entity;
 
 use App\Repository\ClientRepository;
@@ -13,6 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
     new ORM\UniqueConstraint(name: "unique_surname", columns: ["surname"]),
     new ORM\UniqueConstraint(name: "unique_telephone", columns: ["telephone"])
 ])]
+
 class Client
 {
     #[ORM\Id]
@@ -37,6 +37,10 @@ class Client
      */
     #[ORM\OneToMany(targetEntity: Dette::class, mappedBy: 'client')]
     private Collection $dettes;
+
+    // Le champ userAccountId ajouté
+    #[ORM\Column(type: "integer", nullable: true)]
+    private ?int $userAccountId = null;
 
     public function __construct()
     {
@@ -126,5 +130,11 @@ class Client
         }
         
         return $totalMontantRestant;
+    }
+
+    // Méthode pour vérifier si le client a un compte utilisateur
+    public function hasUserAccount(): bool
+    {
+        return $this->userAccountId !== null;
     }
 }
