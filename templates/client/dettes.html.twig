@@ -115,25 +115,29 @@
     <div class="bg-white p-6 rounded-lg shadow-lg w-1/3">
         <h2 class="text-xl font-bold mb-4">Effectuer un Paiement</h2>
         <form method="POST" action="{{ path('dette_payer') }}">
-            <div id="error-message" class="text-red-500 text-sm mb-4"></div>
+    <div id="error-message" class="text-red-500 text-sm mb-4"></div>
 
-            <!-- Input pour le montant à payer -->
-            <div class="mb-4">
-                <label for="montantPaye" class="block text-sm font-medium text-gray-700">Montant à payer</label>
-                <input type="number" id="montantPaye" name="montantPaye" class="w-full px-4 py-2 border rounded-lg" placeholder="Entrez le montant" required>
-            </div>
+    <!-- Input caché pour l'ID de la dette -->
+    <input type="hidden" id="detteId" name="dette_id">
 
-            <!-- Affichage du montant restant -->
-            <div class="mb-4 text-sm text-gray-600">
-                <span id="montantRestant">Montant restant : <strong> </strong></span>
-            </div>
+    <!-- Input pour le montant à payer -->
+    <div class="mb-4">
+        <label for="montantPaye" class="block text-sm font-medium text-gray-700">Montant à payer</label>
+        <input type="number" id="montantPaye" name="montantPaye" class="w-full px-4 py-2 border rounded-lg" placeholder="Entrez le montant" required>
+    </div>
 
-            <!-- Actions -->
-            <div class="flex justify-end">
-                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Payer</button>
-                <button type="button" onclick="closePaymentModal()" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Annuler</button>
-            </div>
-        </form>
+    <!-- Affichage du montant restant -->
+    <div class="mb-4 text-sm text-gray-600">
+        <span id="montantRestant">Montant restant : <strong></strong></span>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-end">
+        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Payer</button>
+        <button type="button" onclick="closePaymentModal()" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Annuler</button>
+    </div>
+</form>
+
     </div>
 </div>
 

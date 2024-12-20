@@ -73,17 +73,21 @@
                 oninput="filterClientsByPhone(this.value)"
             />
         </div>
-         <div class="mb-4 flex gap-4">
-            <select 
-                id="user-account-filter" 
-                class="px-4 py-2 border rounded-lg" 
-                onchange="filterClientsByAccount(this.value)"
-            >
-                <option value="all">Tous</option>
-                <option value="with-account">Avec compte utilisateur</option>
-                <option value="without-account">Sans compte utilisateur</option>
-            </select>
-        </div>
+         <div class="mb-4 flex flex-col gap-4">
+    <label for="user-account-filter" class="block text-sm font-medium text-gray-700">
+        Filtrer les clients
+    </label>
+    <select 
+        id="user-account-filter" 
+        class="px-4 py-2 border rounded-lg bg-gray-50 focus:ring focus:ring-indigo-200 focus:outline-none"
+        onchange="filterClientsByAccount(this.value)"
+    >
+        <option value="all">👥 Tous les clients</option>
+        <option value="with-account">✅ Avec compte utilisateur</option>
+        <option value="without-account">❌ Sans compte utilisateur</option>
+    </select>
+</div>
+
 
         <!-- Table of clients -->
         <table class="min-w-full table-auto bg-white border border-gray-300 rounded-lg shadow-md">
@@ -182,14 +186,14 @@
         }
 
         function filterClientsByPhone(value) {
-            const filter = value.toLowerCase();
-            const rows = document.querySelectorAll("#client-list tr");
+    const filter = value.toLowerCase();
+    clientRows.forEach(row => {
+        const telephone = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+        row.style.display = telephone.includes(filter) ? "" : "none";
+    });
+    updatePagination(); // Réappliquer la pagination après le filtrage
+}
 
-            rows.forEach(row => {
-                const telephone = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
-                row.style.display = telephone.includes(filter) ? "" : "none";
-            });
-        }
 
         function toggleUserAccountFields() {
             const fields = document.getElementById('user-account-fields');
@@ -197,20 +201,20 @@
             fields.classList.toggle('hidden', !checkbox.checked);
         }
 
-        function filterClientsByAccount(value) {
-            const rows = document.querySelectorAll("#client-list tr");
-
-            rows.forEach(row => {
-                const hasAccount = row.getAttribute("data-has-account");
-                if (value === "all") {
-                    row.style.display = ""; // Montre toutes les lignes
-                } else if (value === "with-account") {
-                    row.style.display = hasAccount === "true" ? "" : "none"; // Montre les clients avec compte
-                } else if (value === "without-account") {
-                    row.style.display = hasAccount === "false" ? "" : "none"; // Montre les clients sans compte
-                }
-            });
+       function filterClientsByAccount(value) {
+    clientRows.forEach(row => {
+        const hasAccount = row.getAttribute("data-has-account");
+        if (value === "all") {
+            row.style.display = ""; // Montre toutes les lignes
+        } else if (value === "with-account") {
+            row.style.display = hasAccount === "true" ? "" : "none";
+        } else if (value === "without-account") {
+            row.style.display = hasAccount === "false" ? "" : "none";
         }
+    });
+    updatePagination(); // Réappliquer la pagination après le filtrage
+}
+
 
 
         const clientsPerPage = 5;
@@ -247,46 +251,9 @@
             displayClients();
         }
 
-        // Initialize the page
-        displayClients();
+        
 
-        function filterClientsByPhone(value) {
-            const filter = value.toLowerCase();
-            const rows = document.querySelectorAll("#client-list tr");
 
-            rows.forEach(row => {
-                const telephone = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
-                row.style.display = telephone.includes(filter) ? "" : "none";
-            });
-
-            // Reinitialize pagination after filtering
-            currentPage = 1;
-            displayClients();
-        }
-
-        function toggleUserAccountFields() {
-            const fields = document.getElementById('user-account-fields');
-            const checkbox = document.getElementById('create_user_account');
-            fields.classList.toggle('hidden', !checkbox.checked);
-        }
-
-        function filterClientsByAccount(value) {
-            const rows = document.querySelectorAll("#client-list tr");
-
-            rows.forEach(row => {
-                const hasAccount = row.getAttribute("data-has-account");
-                if (value === "all") {
-                    row.style.display = ""; // Montre toutes les lignes
-                } else if (value === "with-account") {
-                    row.style.display = hasAccount === "true" ? "" : "none"; // Montre les clients avec compte
-                } else if (value === "without-account") {
-                    row.style.display = hasAccount === "false" ? "" : "none"; // Montre les clients sans compte
-                }
-            });
-
-            // Reinitialize pagination after filtering
-            currentPage = 1;
-            displayClients();
-        }
+        
     </script>
 {% endblock %}
